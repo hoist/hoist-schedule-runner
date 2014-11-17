@@ -1,0 +1,42 @@
+{
+  "name": "hoist-schedule-runner",
+  "version": "1.0.0",
+  "description": "Hoist's scheduled task runner",
+  "main": "app.js",
+  "scripts": {
+    "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hoist/hoist-schedule-runner.git"
+  },
+  "author": "Hoist Apps Ltd",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hoist/hoist-schedule-runner/issues"
+  },
+  "homepage": "https://github.com/hoist/hoist-schedule-runner",
+  "devDependencies": {
+    "chai": "^1.9.1",
+    "chai-as-promised": "^4.1.1",
+    "gulp": "^3.8.8",
+    "gulp-istanbul": "^0.3.1",
+    "gulp-istanbul-enforcer": "^1.0.3",
+    "gulp-jshint": "^1.8.4",
+    "gulp-mocha": "^1.1.0",
+    "jshint-growl-reporter": "^0.1.1",
+    "jshint-stylish": "^1.0.0",
+    "run-sequence": "^0.3.7",
+    "sinon": "^1.10.3",
+    "sinon-chai": "^2.5.0",
+    "supertest": "^0.14.0"
+  },
+  "dependencies": {
+    "agenda": "^0.6.24",
+    "bluebird": "^2.3.11",
+    "broker": "git://github.com/hoist/broker",
+    "config": "^1.8.1",
+    "hoist-logger": "git://github.com/hoist/hoist-logger",
+    "lodash": "^2.4.1"
+  }
+}

@@ -8,15 +8,14 @@ var expect = require('chai').expect;
 var Agenda = require('agenda');
 describe('Runner', function () {
   describe('#createEvent', function () {
-    var job = {
-      data: {
-        application: 'appid',
-        environment: 'live'
-      }
+    var data = {
+      application: 'appid',
+      environment: 'live'
+
     };
     before(function () {
       sinon.stub(EventBroker, 'publish').returns(BBPromise.resolve(null));
-      return runner.createEvent(job, 'my:event');
+      return runner.createEvent(data, 'my:event');
     });
     after(function () {
       EventBroker.publish.restore();
@@ -28,9 +27,11 @@ describe('Runner', function () {
   });
   describe('#processEvents', function () {
     var job = {
-      data: {
-        application: 'appid',
-        events: ['event:1', 'event:2']
+      attrs: {
+        data: {
+          application: 'appid',
+          events: ['event:1', 'event:2']
+        }
       }
     };
     before(function (done) {
@@ -42,8 +43,8 @@ describe('Runner', function () {
     });
     it('creates events', function () {
       expect(runner.createEvent)
-        .to.have.been.calledWith(job, 'event:1')
-        .and.calledWith(job, 'event:2');
+        .to.have.been.calledWith(job.attrs.data, 'event:1')
+        .and.calledWith(job.attrs.data, 'event:2');
     });
 
   });

@@ -51,11 +51,17 @@ describe('Runner', function () {
     before(function () {
       sinon.stub(Agenda.prototype, 'database').returnsThis();
       sinon.stub(Agenda.prototype, 'define');
+      sinon.stub(Agenda.prototype, 'start');
       runner.start();
     });
     after(function () {
       Agenda.prototype.database.restore();
+      Agenda.prototype.start.restore();
       Agenda.prototype.define.restore();
+    });
+    it('calls start', function () {
+      return expect(Agenda.prototype.start)
+        .to.have.been.called;
     });
     it('defines create:event runner', function () {
       expect(Agenda.prototype.define)

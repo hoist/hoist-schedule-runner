@@ -1,6 +1,6 @@
 'use strict';
 require('../broker');
-var EventBroker = require('broker/lib/event_broker');
+var EventBroker = require('broker');
 var sinon = require('sinon');
 var runner = require('../../lib/runner');
 var BBPromise = require('bluebird');
@@ -11,18 +11,17 @@ describe('Runner', function () {
     var data = {
       application: 'appid',
       environment: 'live'
-
     };
     before(function () {
-      sinon.stub(EventBroker, 'publish').returns(BBPromise.resolve(null));
+      sinon.stub(runner.eventBroker, 'send').returns(BBPromise.resolve(null));
       return runner.createEvent(data, 'my:event');
     });
     after(function () {
-      EventBroker.publish.restore();
+      runner.eventBroker.send.restore();
     });
     it('publishes event', function () {
-      expect(EventBroker.publish)
-        .to.have.been.calledWith();
+      expect(runner.eventBroker.send)
+        .to.have.been.calledWith(sinon.match.instanceOf(EventBroker.events.ApplicationEvent));
     });
   });
   describe('#processEvents', function () {

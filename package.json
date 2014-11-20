@@ -34,7 +34,7 @@
   "dependencies": {
     "agenda": "^0.6.24",
     "bluebird": "^2.3.11",
-    "broker": "git://github.com/hoist/broker",
+    "broker": "git://github.com/hoist/broker#feature/sqs_messaging",
     "config": "^1.8.1",
     "hoist-logger": "git://github.com/hoist/hoist-logger",
     "lodash": "^2.4.1"

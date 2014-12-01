@@ -49,12 +49,14 @@ describe('Runner', function () {
   });
   describe('#start', function () {
     before(function () {
+      sinon.stub(EventBroker.ModelResolver.get()._mongoose,'connect');
       sinon.stub(Agenda.prototype, 'database').returnsThis();
       sinon.stub(Agenda.prototype, 'define');
       sinon.stub(Agenda.prototype, 'start');
       runner.start();
     });
     after(function () {
+      EventBroker.ModelResolver.get()._mongoose.connect.restore();
       Agenda.prototype.database.restore();
       Agenda.prototype.start.restore();
       Agenda.prototype.define.restore();
@@ -70,10 +72,12 @@ describe('Runner', function () {
   });
   describe('#stop', function () {
     before(function (done) {
+      sinon.stub(EventBroker.ModelResolver.get()._mongoose,'disconnect');
       sinon.stub(Agenda.prototype, 'stop').callsArg(0);
       runner.stop(done);
     });
     after(function () {
+      EventBroker.ModelResolver.get()._mongoose.disconnect.restore();
       Agenda.prototype.stop.restore();
     });
     it('calls stop', function () {

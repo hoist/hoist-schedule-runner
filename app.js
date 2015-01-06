@@ -1,6 +1,6 @@
 'use strict';
 var runner = require('./lib/runner');
-
+process.title = 'hoist-schedule-runner';
 process.on('message', function (msg) {
 
   if (msg === 'shutdown') {

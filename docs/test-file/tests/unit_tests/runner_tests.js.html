@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">tests/unit_tests/runner_tests.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/hoist/hoist-schedule-runner.git" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div data-ice="classWrap">
+  <h2>Class</h2>
+  <ul>
+    
+  <li data-ice="classDoc"><span><a href="class/lib/runner.js~Runner.html">Runner</a></span></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">tests/unit_tests/runner_tests.js</h1>
+<pre class="source-code line-number"><code class="prettyprint linenums" data-ice="content">&apos;use strict&apos;;
+import {
+  Publisher
+}
+from &apos;@hoist/broker&apos;;
+import sinon from &apos;sinon&apos;;
+import Runner from &apos;../../lib/runner&apos;;
+import {
+  expect
+}
+from &apos;chai&apos;;
+import {
+  _mongoose,
+  Event
+}
+from &apos;@hoist/model&apos;;
+import Bluebird from &apos;bluebird&apos;;
+import Agenda from &apos;agenda&apos;;
+
+describe(&apos;Runner&apos;, function () {
+  let runner;
+  before(() =&gt; {
+    sinon.stub(Publisher.prototype, &apos;publish&apos;).returns(Promise.resolve(null));
+    runner = new Runner();
+  });
+  after(() =&gt; {
+    Publisher.prototype.publish.restore();
+  });
+  describe(&apos;Runner#createEvent&apos;, function () {
+    var data = {
+      application: &apos;appid&apos;,
+      environment: &apos;live&apos;
+    };
+    before(function () {
+      return runner.createEvent(data, &apos;my:event&apos;);
+    });
+    after(function () {
+      Publisher.prototype.publish.reset();
+    });
+    it(&apos;publishes event&apos;, function () {
+      expect(Publisher.prototype.publish)
+        .to.have.been.calledWith(sinon.match.instanceOf(Event));
+    });
+  });
+  describe(&apos;Runner#processEvents&apos;, function () {
+    var job = {
+      attrs: {
+        data: {
+          application: &apos;appid&apos;,
+          events: [&apos;event:1&apos;, &apos;event:2&apos;]
+        }
+      }
+    };
+    before(function (done) {
+      sinon.stub(runner, &apos;createEvent&apos;).returns(Promise.resolve(null));
+      runner.processEvents(job, done);
+    });
+    after(function () {
+      runner.createEvent.restore();
+    });
+    it(&apos;creates events&apos;, function () {
+      expect(runner.createEvent)
+        .to.have.been.calledWith(job.attrs.data, &apos;event:1&apos;)
+        .and.calledWith(job.attrs.data, &apos;event:2&apos;);
+    });
+
+  });
+
+  describe(&apos;#start&apos;, function () {
+    before(function () {
+      sinon.stub(_mongoose, &apos;connect&apos;).yields();
+      sinon.stub(Agenda.prototype, &apos;database&apos;).returnsThis();
+      sinon.stub(Agenda.prototype, &apos;define&apos;);
+      sinon.stub(Agenda.prototype, &apos;start&apos;);
+      runner.start();
+    });
+    after(function () {
+      _mongoose.connect.restore();
+      Agenda.prototype.database.restore();
+      Agenda.prototype.start.restore();
+      Agenda.prototype.define.restore();
+      delete runner._agenda;
+    });
+    it(&apos;calls start&apos;, function () {
+      return expect(Agenda.prototype.start)
+        .to.have.been.called;
+    });
+    it(&apos;defines create:event runner&apos;, function () {
+      return expect(Agenda.prototype.define)
+        .to.be.calledWith(&apos;create:event&apos;, sinon.match.func);
+    });
+    it(&apos;defines a local agenda&apos;, () =&gt; {
+      return expect(runner._agenda).to.exist;
+    });
+    it(&apos;promisifys agenda&apos;, () =&gt; {
+      return expect(runner._agenda).to.respondTo(&apos;mongoAsync&apos;);
+    });
+  });
+
+  describe(&apos;#stop&apos;, function () {
+    before(function () {
+
+      sinon.stub(_mongoose, &apos;disconnect&apos;).yields();
+      sinon.stub(Agenda.prototype, &apos;stop&apos;).yields();
+      runner._agenda = new Agenda();
+      Bluebird.promisifyAll(runner._agenda);
+      return runner.stop();
+    });
+    after(function () {
+      _mongoose.disconnect.restore();
+      Agenda.prototype.stop.restore();
+    });
+    it(&apos;calls stop&apos;, function () {
+      return expect(Agenda.prototype.stop).to.have.been.called;
+    });
+    it(&apos;removes agenda&apos;, () =&gt; {
+      return expect(runner._agenda).to.not.exist;
+    });
+  });
+
+});
+</code></pre>
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.1.2)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

@@ -1,16 +1,17 @@
 {
   "Hoist": {
+    "application": {
+      "name": "Hoist Schedule Runner"
+    },
+    "rabbit": {
+      "url": "amqp://rabbitmq",
+      "managementurl": "http://guest:guest@rabbitmq:15672/"
+    },
     "mongo": {
-      "db": "mongodb://localhost/hoist-default"
+      "core": {
+        "connectionString": "mongodb://db/hoist-default"
+      }
     },
-    "messageBus": {
-      "type": "sqs"
-    },
-    "aws": {
-      "account": "awsaccount",
-      "secret": "secret",
-      "region": "awsregion",
-      "prefix": "DEVELOPMENT_"
-    }
+    "debug": true
   }
 }

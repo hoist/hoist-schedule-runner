@@ -1,0 +1,11 @@
+{
+  "coverage": "0%",
+  "expectCount": 6,
+  "actualCount": 0,
+  "files": {
+    "lib/runner.js": {
+      "expectCount": 6,
+      "actualCount": 0
+    }
+  }
+}

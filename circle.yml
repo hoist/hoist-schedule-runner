@@ -29,7 +29,7 @@ test:
     - docker kill schedule-runner-test; true;
     - docker rm schedule-runner-test; true;
     - docker run -d --name mongodb mongo
-    - docker run -t --link mongodb:db --link rabbitmq:rabbitmq --name schedule-runner-test --entrypoint gulp quay.io/hoist/schedule-runner:${CIRCLE_BRANCH//feature\//} test
+    - docker run -t --link mongodb:db --name schedule-runner-test --entrypoint gulp quay.io/hoist/schedule-runner:${CIRCLE_BRANCH//feature\//} test
   post:
     - docker cp schedule-runner-test:/usr/src/app/coverage ~/
 general:

@@ -80,6 +80,11 @@ class Runner {
       job: job
     }, &apos;processing schedule job&apos;);
     var data = job.attrs.data;
+    if (process.env.NODE_ENV === &apos;Production&apos;) {
+      if (data.application !== &apos;demo-connect-app&apos;) {
+        return Promise.resolve();
+      }
+    }
     return Promise.resolve()
       .then(() =&gt; {
         Promise.all(data.events.map((eventName) =&gt; {

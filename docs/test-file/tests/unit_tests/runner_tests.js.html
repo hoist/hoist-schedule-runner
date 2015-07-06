@@ -136,7 +136,7 @@ describe(&apos;Runner&apos;, function () {
     });
     it(&apos;defines create:event runner&apos;, function () {
       return expect(Agenda.prototype.define)
-        .to.be.calledWith(&apos;create:event&apos;, sinon.match.func);
+        .to.be.calledWith(&apos;create:event2&apos;, sinon.match.func);
     });
     it(&apos;defines a local agenda&apos;, () =&gt; {
       return expect(runner._agenda).to.exist;

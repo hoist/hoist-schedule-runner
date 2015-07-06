@@ -87,7 +87,7 @@ describe('Runner', function () {
     });
     it('defines create:event runner', function () {
       return expect(Agenda.prototype.define)
-        .to.be.calledWith('create:event', sinon.match.func);
+        .to.be.calledWith('create:event2', sinon.match.func);
     });
     it('defines a local agenda', () => {
       return expect(runner._agenda).to.exist;

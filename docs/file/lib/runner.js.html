@@ -80,7 +80,7 @@ class Runner {
       job: job
     }, &apos;processing schedule job&apos;);
     var data = job.attrs.data;
-    if (process.env.NODE_ENV === &apos;Production&apos;) {
+    if (process.env.NODE_ENV === &apos;production&apos;) {
       if (data.application !== &apos;demo-connect-app&apos;) {
         return Promise.resolve();
       }
@@ -127,7 +127,7 @@ class Runner {
           timestampHour: raisedDate.utc().startOf(&apos;hour&apos;).toDate()
         }, update, {
           upsert: true
-        }).catch(function (err) {
+        }).catch((err) =&gt; {
           this._logger.alert(err);
           this._logger.error(err);
         });

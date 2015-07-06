@@ -151,7 +151,9 @@ class Runner {
         }
       });
       Bluebird.promisifyAll(this._agenda);
-      this._agenda.define(&apos;create:event&apos;, this.processEvents);
+      this._agenda.define(&apos;create:event&apos;, (job, done) =&gt; {
+        return this.processEvents(job, done);
+      });
       this._agenda.start();
       logger.info(&apos;waiting on schedule&apos;);
     });

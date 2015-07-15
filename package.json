@@ -47,7 +47,7 @@
     "stream-to-promise": "^1.0.4"
   },
   "dependencies": {
-    "@hoist/broker": "^1.0.9",
+    "@hoist/broker": "^1.0.10",
     "@hoist/logger": "^1.0.0",
     "agenda": "^0.6.24",
     "babel": "^5.6.14",

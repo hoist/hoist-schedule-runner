@@ -1,30 +1,48 @@
 'use strict';
-require('../broker');
-var EventBroker = require('broker');
-var sinon = require('sinon');
-var runner = require('../../lib/runner');
-var BBPromise = require('bluebird');
-var expect = require('chai').expect;
-var Agenda = require('agenda');
+import {
+  Publisher
+}
+from '@hoist/broker';
+import sinon from 'sinon';
+import Runner from '../../lib/runner';
+import {
+  expect
+}
+from 'chai';
+import {
+  _mongoose,
+  Event
+}
+from '@hoist/model';
+import Bluebird from 'bluebird';
+import Agenda from 'agenda';
+
 describe('Runner', function () {
-  describe('#createEvent', function () {
+  let runner;
+  before(() => {
+    sinon.stub(Publisher.prototype, 'publish').returns(Promise.resolve(null));
+    runner = new Runner();
+  });
+  after(() => {
+    Publisher.prototype.publish.restore();
+  });
+  describe('Runner#createEvent', function () {
     var data = {
       application: 'appid',
       environment: 'live'
     };
     before(function () {
-      sinon.stub(runner.eventBroker, 'send').returns(BBPromise.resolve(null));
       return runner.createEvent(data, 'my:event');
     });
     after(function () {
-      runner.eventBroker.send.restore();
+      Publisher.prototype.publish.reset();
     });
     it('publishes event', function () {
-      expect(runner.eventBroker.send)
-        .to.have.been.calledWith(sinon.match.instanceOf(EventBroker.events.ApplicationEvent));
+      expect(Publisher.prototype.publish)
+        .to.have.been.calledWith(sinon.match.instanceOf(Event));
     });
   });
-  describe('#processEvents', function () {
+  describe('Runner#processEvents', function () {
     var job = {
       attrs: {
         data: {
@@ -34,7 +52,7 @@ describe('Runner', function () {
       }
     };
     before(function (done) {
-      sinon.stub(runner, 'createEvent').returns(BBPromise.resolve(null));
+      sinon.stub(runner, 'createEvent').returns(Promise.resolve(null));
       runner.processEvents(job, done);
     });
     after(function () {
@@ -47,41 +65,57 @@ describe('Runner', function () {
     });
 
   });
+
   describe('#start', function () {
     before(function () {
-      sinon.stub(EventBroker.ModelResolver.get()._mongoose,'connect');
+      sinon.stub(_mongoose, 'connect').yields();
       sinon.stub(Agenda.prototype, 'database').returnsThis();
       sinon.stub(Agenda.prototype, 'define');
       sinon.stub(Agenda.prototype, 'start');
       runner.start();
     });
     after(function () {
-      EventBroker.ModelResolver.get()._mongoose.connect.restore();
+      _mongoose.connect.restore();
       Agenda.prototype.database.restore();
       Agenda.prototype.start.restore();
       Agenda.prototype.define.restore();
+      delete runner._agenda;
     });
     it('calls start', function () {
       return expect(Agenda.prototype.start)
         .to.have.been.called;
     });
     it('defines create:event runner', function () {
-      expect(Agenda.prototype.define)
-        .to.be.calledWith('create:event', sinon.match.func);
+      return expect(Agenda.prototype.define)
+        .to.be.calledWith('create:event2', sinon.match.func);
+    });
+    it('defines a local agenda', () => {
+      return expect(runner._agenda).to.exist;
+    });
+    it('promisifys agenda', () => {
+      return expect(runner._agenda).to.respondTo('mongoAsync');
     });
   });
+
   describe('#stop', function () {
-    before(function (done) {
-      sinon.stub(EventBroker.ModelResolver.get()._mongoose,'disconnect');
-      sinon.stub(Agenda.prototype, 'stop').callsArg(0);
-      runner.stop(done);
+    before(function () {
+
+      sinon.stub(_mongoose, 'disconnect').yields();
+      sinon.stub(Agenda.prototype, 'stop').yields();
+      runner._agenda = new Agenda();
+      Bluebird.promisifyAll(runner._agenda);
+      return runner.stop();
     });
     after(function () {
-      EventBroker.ModelResolver.get()._mongoose.disconnect.restore();
+      _mongoose.disconnect.restore();
       Agenda.prototype.stop.restore();
     });
     it('calls stop', function () {
       return expect(Agenda.prototype.stop).to.have.been.called;
     });
+    it('removes agenda', () => {
+      return expect(runner._agenda).to.not.exist;
+    });
   });
+
 });

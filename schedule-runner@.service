@@ -1,0 +1,17 @@
+[Unit]
+Description=Hoist Application Schedule Runner Service
+After=config.service
+
+[Service]
+User=core
+Restart=always
+ExecStartPre=-/usr/bin/docker kill schedule-runner-%i
+ExecStartPre=-/usr/bin/docker rm schedule-runner-%i
+ExecStartPre=-/usr/bin/docker pull quay.io/hoist/schedule-runner:master
+ExecStart=/usr/bin/docker run -h schedule-runner-%i --name schedule-runner-%i -e "SERVICE_NAME=schedule-runner" -e "NODE_ENV=production" --volumes-from config -P quay.io/hoist/schedule-runner:master
+ExecStop=/usr/bin/docker stop schedule-runner-%i
+TimeoutStartSec=30m
+
+[X-Fleet]
+Conflicts=schedule-runner@*.service
+MachineMetadata=container_type=web

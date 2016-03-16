@@ -112,7 +112,7 @@ describe(&apos;Runner&apos;, function () {
       sinon.stub(Agenda.prototype, &apos;database&apos;).returnsThis();
       sinon.stub(Agenda.prototype, &apos;define&apos;);
       sinon.stub(Agenda.prototype, &apos;start&apos;);
-      runner.start();
+      return runner.start();
     });
     after(function () {
       _mongoose.connect.restore();

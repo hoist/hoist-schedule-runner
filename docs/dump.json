@@ -10,7 +10,7 @@
     "access": null,
     "description": null,
     "lineNumber": 1,
-    "content": "'use strict';\nimport Agenda from 'agenda';\nimport config from 'config';\nimport logger from '@hoist/logger';\nimport {\n  Publisher\n}\nfrom '@hoist/broker';\nimport {\n  Event,\n  EventMetric,\n  _mongoose\n}\nfrom '@hoist/model';\nimport Moment from 'moment';\nimport uuid from 'uuid';\nimport Bluebird from 'bluebird';\n\nBluebird.promisifyAll(_mongoose);\n\nclass Runner {\n  constructor() {\n    this._publisher = new Publisher();\n    this._logger = logger.child({\n      cls: this.constructor.name\n    });\n\n  }\n  processEvents(job, done) {\n    this._logger.info({\n      job: job\n    }, 'processing schedule job');\n    var data = job.attrs.data;\n    return Promise.resolve()\n      .then(() => {\n        Promise.all(data.events.map((eventName) => {\n          return this.createEvent(data, eventName);\n        }));\n      }).then(() => {\n        done();\n      }).catch((err) => {\n        this._logger.error(err);\n        done(err);\n      });\n  }\n  createEvent(data, eventName) {\n    var ev = new Event({\n      eventId: uuid.v4().split('-').join(''),\n      applicationId: data.application,\n      eventName: eventName,\n      environment: data.environment,\n      correlationId: require('uuid').v4()\n    });\n\n    this._logger.info({\n      eventId: ev.messageId,\n      applicationId: ev.applicationId,\n      correlationId: ev.correlationId,\n      eventName: eventName\n    }, 'raising scheduled event');\n    return this._publisher.publish(ev)\n      .then(() => {\n        var raisedDate = new Moment();\n        var update = {\n          $inc: {}\n        };\n        update.$inc.totalRaised = 1;\n        update.$inc['raised.' + raisedDate.utc().minutes()] = 1;\n        EventMetric.updateAsync({\n          application: ev.applicationId,\n          environment: 'live',\n          eventName: ev.eventName,\n          timestampHour: raisedDate.utc().startOf('hour').toDate()\n        }, update, {\n          upsert: true\n        }).catch((err) => {\n          this._logger.alert(err);\n          this._logger.error(err);\n        });\n        return ev;\n      })\n      .catch((err) => {\n        err.eventName = eventName;\n        this._logger.error(err, 'unable to publish event');\n        this._logger.alert(err, data.application, {\n          source: 'Runner#createEvent',\n          eventName: eventName\n        });\n      });\n  }\n  start() {\n    return _mongoose.connectAsync(config.get('Hoist.mongo.core.connectionString')).\n    then(() => {\n      logger.info('creating agenda');\n      this._agenda = new Agenda({\n        db: {\n          address: config.get('Hoist.mongo.core.connectionString')\n        }\n      });\n      logger.info('promisifying agenda');\n      Bluebird.promisifyAll(this._agenda);\n      logger.info('defining job');\n      this._agenda.define('create:event2', (job, done) => {\n        return this.processEvents(job, done);\n      });\n      return Bluebird.delay(1000);\n    }).then(() => {\n      logger.info('starting agenda');\n      this._agenda.start();\n      logger.info('waiting on schedule');\n\n    });\n\n  }\n  stop() {\n    return this._agenda.stopAsync().then(() => {\n      delete this._agenda;\n      return _mongoose.disconnectAsync();\n    });\n  }\n}\n\n\nexport default Runner;\n"
+    "content": "'use strict';\nimport Agenda from 'agenda';\nimport config from 'config';\nimport logger from '@hoist/logger';\nimport {\n  Publisher\n}\nfrom '@hoist/broker';\nimport {\n  Event,\n  EventMetric,\n  _mongoose\n}\nfrom '@hoist/model';\nimport Moment from 'moment';\nimport uuid from 'uuid';\nimport Bluebird from 'bluebird';\nimport {\n  MongoClient\n} from 'mongodb';\nBluebird.promisifyAll(_mongoose);\n\nclass Runner {\n  constructor() {\n    this._publisher = new Publisher();\n    this._logger = logger.child({\n      cls: this.constructor.name\n    });\n\n  }\n  processEvents(job, done) {\n    this._logger.info({\n      job: job\n    }, 'processing schedule job');\n    var data = job.attrs.data;\n    return Promise.resolve()\n      .then(() => {\n        Promise.all(data.events.map((eventName) => {\n          return this.createEvent(data, eventName);\n        }));\n      }).then(() => {\n        done();\n      }).catch((err) => {\n        this._logger.error(err);\n        done(err);\n      });\n  }\n  createEvent(data, eventName) {\n    var ev = new Event({\n      eventId: uuid.v4().split('-').join(''),\n      applicationId: data.application,\n      eventName: eventName,\n      environment: data.environment,\n      correlationId: require('uuid').v4()\n    });\n\n    this._logger.info({\n      eventId: ev.messageId,\n      applicationId: ev.applicationId,\n      correlationId: ev.correlationId,\n      eventName: eventName\n    }, 'raising scheduled event');\n    return this._publisher.publish(ev)\n      .then(() => {\n        var raisedDate = new Moment();\n        var update = {\n          $inc: {}\n        };\n        update.$inc.totalRaised = 1;\n        update.$inc['raised.' + raisedDate.utc().minutes()] = 1;\n        EventMetric.updateAsync({\n          application: ev.applicationId,\n          environment: 'live',\n          eventName: ev.eventName,\n          timestampHour: raisedDate.utc().startOf('hour').toDate()\n        }, update, {\n          upsert: true\n        }).catch((err) => {\n          this._logger.alert(err);\n          this._logger.error(err);\n        });\n        return ev;\n      })\n      .catch((err) => {\n        err.eventName = eventName;\n        this._logger.error(err, 'unable to publish event');\n        this._logger.alert(err, data.application, {\n          source: 'Runner#createEvent',\n          eventName: eventName\n        });\n      });\n  }\n  start() {\n    return _mongoose.connectAsync(config.get('Hoist.mongo.core.connectionString')).\n    then(() => {\n      logger.info('creating agenda');\n      return new Promise((resolve) => {\n        this._agenda = new Agenda({\n          db: {\n            address: config.get('Hoist.mongo.core.connectionString')\n          }\n        }, () => {\n          resolve();\n        });\n      }).then(() => {\n        logger.info('promisifying agenda');\n        Bluebird.promisifyAll(this._agenda);\n        logger.info('defining job');\n        this._agenda.define('create:event2', (job, done) => {\n          return this.processEvents(job, done);\n        });\n      });\n    }).then(() => {\n      logger.info('starting agenda');\n      this._agenda.start();\n      logger.info('waiting on schedule');\n\n    });\n\n  }\n  stop() {\n    return this._agenda.stopAsync().then(() => {\n      delete this._agenda;\n      return _mongoose.disconnectAsync();\n    });\n  }\n}\n\n\nexport default Runner;\n"
   },
   {
     "__docId__": 1,
@@ -25,7 +25,7 @@
     "importPath": "hoist-schedule-runner/lib/runner.js",
     "importStyle": "Runner",
     "description": null,
-    "lineNumber": 21,
+    "lineNumber": 23,
     "undocument": true,
     "interface": false
   },
@@ -39,7 +39,7 @@
     "longname": "lib/runner.js~Runner#constructor",
     "access": null,
     "description": null,
-    "lineNumber": 22,
+    "lineNumber": 24,
     "undocument": true,
     "params": [],
     "generator": false
@@ -54,7 +54,7 @@
     "longname": "lib/runner.js~Runner#_publisher",
     "access": null,
     "description": null,
-    "lineNumber": 23,
+    "lineNumber": 25,
     "undocument": true,
     "type": {
       "types": [
@@ -72,7 +72,7 @@
     "longname": "lib/runner.js~Runner#_logger",
     "access": null,
     "description": null,
-    "lineNumber": 24,
+    "lineNumber": 26,
     "undocument": true,
     "type": {
       "types": [
@@ -90,7 +90,7 @@
     "longname": "lib/runner.js~Runner#processEvents",
     "access": null,
     "description": null,
-    "lineNumber": 29,
+    "lineNumber": 31,
     "undocument": true,
     "params": [
       {
@@ -123,7 +123,7 @@
     "longname": "lib/runner.js~Runner#createEvent",
     "access": null,
     "description": null,
-    "lineNumber": 46,
+    "lineNumber": 48,
     "undocument": true,
     "params": [
       {
@@ -156,7 +156,7 @@
     "longname": "lib/runner.js~Runner#start",
     "access": null,
     "description": null,
-    "lineNumber": 91,
+    "lineNumber": 93,
     "undocument": true,
     "params": [],
     "return": {
@@ -176,7 +176,7 @@
     "longname": "lib/runner.js~Runner#_agenda",
     "access": null,
     "description": null,
-    "lineNumber": 95,
+    "lineNumber": 98,
     "undocument": true,
     "type": {
       "types": [
@@ -194,7 +194,7 @@
     "longname": "lib/runner.js~Runner#stop",
     "access": null,
     "description": null,
-    "lineNumber": 115,
+    "lineNumber": 121,
     "undocument": true,
     "params": [],
     "return": {
@@ -930,7 +930,7 @@
     "access": null,
     "description": null,
     "lineNumber": 1,
-    "content": "'use strict';\nimport {\n  Publisher\n}\nfrom '@hoist/broker';\nimport sinon from 'sinon';\nimport Runner from '../../lib/runner';\nimport {\n  expect\n}\nfrom 'chai';\nimport {\n  _mongoose,\n  Event\n}\nfrom '@hoist/model';\nimport Bluebird from 'bluebird';\nimport Agenda from 'agenda';\n\ndescribe('Runner', function () {\n  let runner;\n  before(() => {\n    sinon.stub(Publisher.prototype, 'publish').returns(Promise.resolve(null));\n    runner = new Runner();\n  });\n  after(() => {\n    Publisher.prototype.publish.restore();\n  });\n  describe('Runner#createEvent', function () {\n    var data = {\n      application: 'appid',\n      environment: 'live'\n    };\n    before(function () {\n      return runner.createEvent(data, 'my:event');\n    });\n    after(function () {\n      Publisher.prototype.publish.reset();\n    });\n    it('publishes event', function () {\n      expect(Publisher.prototype.publish)\n        .to.have.been.calledWith(sinon.match.instanceOf(Event));\n    });\n  });\n  describe('Runner#processEvents', function () {\n    var job = {\n      attrs: {\n        data: {\n          application: 'appid',\n          events: ['event:1', 'event:2']\n        }\n      }\n    };\n    before(function (done) {\n      sinon.stub(runner, 'createEvent').returns(Promise.resolve(null));\n      runner.processEvents(job, done);\n    });\n    after(function () {\n      runner.createEvent.restore();\n    });\n    it('creates events', function () {\n      expect(runner.createEvent)\n        .to.have.been.calledWith(job.attrs.data, 'event:1')\n        .and.calledWith(job.attrs.data, 'event:2');\n    });\n\n  });\n\n  describe('#start', function () {\n    before(function () {\n      sinon.stub(_mongoose, 'connect').yields();\n      sinon.stub(Agenda.prototype, 'database').returnsThis();\n      sinon.stub(Agenda.prototype, 'define');\n      sinon.stub(Agenda.prototype, 'start');\n      return runner.start();\n    });\n    after(function () {\n      _mongoose.connect.restore();\n      Agenda.prototype.database.restore();\n      Agenda.prototype.start.restore();\n      Agenda.prototype.define.restore();\n      delete runner._agenda;\n    });\n    it('calls start', function () {\n      return expect(Agenda.prototype.start)\n        .to.have.been.called;\n    });\n    it('defines create:event runner', function () {\n      return expect(Agenda.prototype.define)\n        .to.be.calledWith('create:event2', sinon.match.func);\n    });\n    it('defines a local agenda', () => {\n      return expect(runner._agenda).to.exist;\n    });\n    it('promisifys agenda', () => {\n      return expect(runner._agenda).to.respondTo('mongoAsync');\n    });\n  });\n\n  describe('#stop', function () {\n    before(function () {\n\n      sinon.stub(_mongoose, 'disconnect').yields();\n      sinon.stub(Agenda.prototype, 'stop').yields();\n      runner._agenda = new Agenda();\n      Bluebird.promisifyAll(runner._agenda);\n      return runner.stop();\n    });\n    after(function () {\n      _mongoose.disconnect.restore();\n      Agenda.prototype.stop.restore();\n    });\n    it('calls stop', function () {\n      return expect(Agenda.prototype.stop).to.have.been.called;\n    });\n    it('removes agenda', () => {\n      return expect(runner._agenda).to.not.exist;\n    });\n  });\n\n});\n"
+    "content": "'use strict';\nimport {\n  Publisher\n}\nfrom '@hoist/broker';\nimport sinon from 'sinon';\nimport Runner from '../../lib/runner';\nimport {\n  expect\n}\nfrom 'chai';\nimport {\n  _mongoose,\n  Event\n}\nfrom '@hoist/model';\nimport Bluebird from 'bluebird';\nimport Agenda from 'agenda';\n\ndescribe('Runner', function () {\n  let runner;\n  before(() => {\n    sinon.stub(Publisher.prototype, 'publish').returns(Promise.resolve(null));\n    runner = new Runner();\n  });\n  after(() => {\n    Publisher.prototype.publish.restore();\n  });\n  describe('Runner#createEvent', function () {\n    var data = {\n      application: 'appid',\n      environment: 'live'\n    };\n    before(function () {\n      return runner.createEvent(data, 'my:event');\n    });\n    after(function () {\n      Publisher.prototype.publish.reset();\n    });\n    it('publishes event', function () {\n      expect(Publisher.prototype.publish)\n        .to.have.been.calledWith(sinon.match.instanceOf(Event));\n    });\n  });\n  describe('Runner#processEvents', function () {\n    var job = {\n      attrs: {\n        data: {\n          application: 'appid',\n          events: ['event:1', 'event:2']\n        }\n      }\n    };\n    before(function (done) {\n      sinon.stub(runner, 'createEvent').returns(Promise.resolve(null));\n      runner.processEvents(job, done);\n    });\n    after(function () {\n      runner.createEvent.restore();\n    });\n    it('creates events', function () {\n      expect(runner.createEvent)\n        .to.have.been.calledWith(job.attrs.data, 'event:1')\n        .and.calledWith(job.attrs.data, 'event:2');\n    });\n\n  });\n\n  describe('#start', function () {\n    before(function () {\n      sinon.stub(_mongoose, 'connect').yields();\n      sinon.stub(Agenda.prototype, 'database').yields();\n      sinon.stub(Agenda.prototype, 'define');\n      sinon.stub(Agenda.prototype, 'start');\n      return runner.start();\n    });\n    after(function () {\n      _mongoose.connect.restore();\n      Agenda.prototype.database.restore();\n      Agenda.prototype.start.restore();\n      Agenda.prototype.define.restore();\n      delete runner._agenda;\n    });\n    it('calls start', function () {\n      return expect(Agenda.prototype.start)\n        .to.have.been.called;\n    });\n    it('defines create:event runner', function () {\n      return expect(Agenda.prototype.define)\n        .to.be.calledWith('create:event2', sinon.match.func);\n    });\n    it('defines a local agenda', () => {\n      return expect(runner._agenda).to.exist;\n    });\n    it('promisifys agenda', () => {\n      return expect(runner._agenda).to.respondTo('mongoAsync');\n    });\n  });\n\n  describe('#stop', function () {\n    before(function () {\n\n      sinon.stub(_mongoose, 'disconnect').yields();\n      sinon.stub(Agenda.prototype, 'stop').yields();\n      runner._agenda = new Agenda();\n      Bluebird.promisifyAll(runner._agenda);\n      return runner.stop();\n    });\n    after(function () {\n      _mongoose.disconnect.restore();\n      Agenda.prototype.stop.restore();\n    });\n    it('calls stop', function () {\n      return expect(Agenda.prototype.stop).to.have.been.called;\n    });\n    it('removes agenda', () => {\n      return expect(runner._agenda).to.not.exist;\n    });\n  });\n\n});\n"
   },
   {
     "__docId__": 68,

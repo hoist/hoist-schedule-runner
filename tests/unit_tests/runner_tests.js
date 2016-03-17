@@ -69,7 +69,7 @@ describe('Runner', function () {
   describe('#start', function () {
     before(function () {
       sinon.stub(_mongoose, 'connect').yields();
-      sinon.stub(Agenda.prototype, 'database').returnsThis();
+      sinon.stub(Agenda.prototype, 'database').yields();
       sinon.stub(Agenda.prototype, 'define');
       sinon.stub(Agenda.prototype, 'start');
       return runner.start();

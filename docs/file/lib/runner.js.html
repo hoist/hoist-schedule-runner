@@ -55,7 +55,9 @@ from &apos;@hoist/model&apos;;
 import Moment from &apos;moment&apos;;
 import uuid from &apos;uuid&apos;;
 import Bluebird from &apos;bluebird&apos;;
-
+import {
+  MongoClient
+} from &apos;mongodb&apos;;
 Bluebird.promisifyAll(_mongoose);
 
 class Runner {
@@ -132,18 +134,22 @@ class Runner {
     return _mongoose.connectAsync(config.get(&apos;Hoist.mongo.core.connectionString&apos;)).
     then(() =&gt; {
       logger.info(&apos;creating agenda&apos;);
-      this._agenda = new Agenda({
-        db: {
-          address: config.get(&apos;Hoist.mongo.core.connectionString&apos;)
-        }
+      return new Promise((resolve) =&gt; {
+        this._agenda = new Agenda({
+          db: {
+            address: config.get(&apos;Hoist.mongo.core.connectionString&apos;)
+          }
+        }, () =&gt; {
+          resolve();
+        });
+      }).then(() =&gt; {
+        logger.info(&apos;promisifying agenda&apos;);
+        Bluebird.promisifyAll(this._agenda);
+        logger.info(&apos;defining job&apos;);
+        this._agenda.define(&apos;create:event2&apos;, (job, done) =&gt; {
+          return this.processEvents(job, done);
+        });
       });
-      logger.info(&apos;promisifying agenda&apos;);
-      Bluebird.promisifyAll(this._agenda);
-      logger.info(&apos;defining job&apos;);
-      this._agenda.define(&apos;create:event2&apos;, (job, done) =&gt; {
-        return this.processEvents(job, done);
-      });
-      return Bluebird.delay(1000);
     }).then(() =&gt; {
       logger.info(&apos;starting agenda&apos;);
       this._agenda.start();

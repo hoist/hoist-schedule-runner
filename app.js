@@ -1,6 +1,6 @@
 'use strict';
-require('babel/register');
-var Runner = require('./lib/runner');
+require('babel-register');
+var Runner = require('./lib/runner').default;
 var logger = require('@hoist/logger');
 var runner = new Runner();
 process.title = 'hoist-schedule-runner';

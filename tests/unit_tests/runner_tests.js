@@ -72,7 +72,7 @@ describe('Runner', function () {
       sinon.stub(Agenda.prototype, 'database').returnsThis();
       sinon.stub(Agenda.prototype, 'define');
       sinon.stub(Agenda.prototype, 'start');
-      runner.start();
+      return runner.start();
     });
     after(function () {
       _mongoose.connect.restore();

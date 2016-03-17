@@ -1,8 +1,8 @@
 'use strict';
-require("babel/register");
+require("babel-register");
 var logger = require('@hoist/logger');
 
-var ExecutorService = require('./lib/executor_service');
+var ExecutorService = require('./lib/executor_service').default;
 var executorService = new ExecutorService();
 
 var gracefullShutdown = function (SIG) {
